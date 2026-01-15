@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Plus, TrendingUp, Calendar, AlertCircle, User, Activity, Moon, Sun } from 'lucide-react';
+import { Heart, Plus, TrendingUp, Calendar, AlertCircle, User, Activity, Moon, Sun, Download, BarChart3 } from 'lucide-react';
 
 const BPTracker = () => {
   const [readings, setReadings] = useState([]);
@@ -14,6 +14,7 @@ const BPTracker = () => {
   const [patientName, setPatientName] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [showCharts, setShowCharts] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -139,6 +140,127 @@ const BPTracker = () => {
     setShowSettings(false);
   };
 
+  // PDF EXPORT FUNCTION - THIS IS THE PDF FEATURE!
+  const exportToPDF = () => {
+    const averages = getAverages();
+    const sortedReadings = [...readings].reverse();
+    
+    let pdfContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>BP Tracker Report - ${patientName || 'Patient'}</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+    .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #2563eb; padding-bottom: 20px; }
+    .header h1 { color: #1e40af; margin: 0; }
+    .header p { color: #64748b; margin: 5px 0; }
+    .summary { background: #eff6ff; padding: 20px; border-radius: 10px; margin-bottom: 30px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
+    .stat-box { text-align: center; background: white; padding: 15px; border-radius: 8px; }
+    .stat-value { font-size: 24px; font-weight: bold; color: #1e40af; }
+    .stat-label { font-size: 12px; color: #64748b; margin-top: 5px; }
+    .reading { border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+    .reading-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .bp-value { font-size: 28px; font-weight: bold; color: #1f2937; }
+    .badge { padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; }
+    .badge-normal { background: #d1fae5; color: #065f46; }
+    .badge-elevated { background: #fef3c7; color: #92400e; }
+    .badge-stage1 { background: #fed7aa; color: #9a3412; }
+    .badge-stage2 { background: #fecaca; color: #991b1b; }
+    .badge-crisis { background: #fca5a5; color: #7f1d1d; }
+    .reading-details { color: #64748b; font-size: 14px; margin-top: 10px; }
+    .notes { background: #f9fafb; padding: 10px; border-radius: 5px; margin-top: 10px; font-style: italic; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; color: #64748b; font-size: 12px; }
+    .info-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+    @media print { body { margin: 0; padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🫀 Blood Pressure Report</h1>
+    <p><strong>Patient:</strong> ${patientName || 'Not Specified'}</p>
+    <p><strong>Report Generated:</strong> ${new Date().toLocaleString('en-NG')}</p>
+    <p><strong>Total Readings:</strong> ${readings.length}</p>
+  </div>
+
+  ${averages ? `
+  <div class="summary">
+    <h2 style="margin-top: 0; color: #1e40af;">7-Day Summary</h2>
+    <div class="summary-grid">
+      <div class="stat-box">
+        <div class="stat-value">${averages.avgSys}/${averages.avgDia}</div>
+        <div class="stat-label">Average BP (mmHg)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">${averages.avgPulse}</div>
+        <div class="stat-label">Average Pulse (bpm)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">${readings.length}</div>
+        <div class="stat-label">Total Readings</div>
+      </div>
+    </div>
+  </div>
+  ` : ''}
+
+  <h2 style="color: #1e40af; margin-bottom: 20px;">Reading History</h2>
+
+  ${sortedReadings.map(reading => {
+    const category = getBPCategory(reading.systolic, reading.diastolic);
+    const badgeClass = category.level === 'Normal' ? 'badge-normal' :
+                       category.level === 'Elevated' ? 'badge-elevated' :
+                       category.level === 'Stage 1' ? 'badge-stage1' :
+                       category.level === 'Stage 2' ? 'badge-stage2' : 'badge-crisis';
+    
+    return `
+    <div class="reading">
+      <div class="reading-header">
+        <div class="bp-value">${reading.systolic}/${reading.diastolic}</div>
+        <span class="badge ${badgeClass}">${category.level}</span>
+      </div>
+      <div class="reading-details">
+        <div>❤️ Pulse: <strong>${reading.pulse} bpm</strong></div>
+        <div>📅 ${reading.date} at ${reading.time}</div>
+        ${reading.medication ? '<div>💊 Medication taken</div>' : ''}
+      </div>
+      ${reading.notes ? `<div class="notes">📝 ${reading.notes}</div>` : ''}
+      <div class="info-box" style="margin-top: 10px; font-size: 13px;">
+        <strong>Advice:</strong> ${category.advice}
+      </div>
+    </div>
+    `;
+  }).join('')}
+
+  <div class="info-box">
+    <h3 style="margin-top: 0;">Blood Pressure Categories:</h3>
+    <ul style="margin: 10px 0;">
+      <li><strong>Normal:</strong> Less than 120/80 mmHg</li>
+      <li><strong>Elevated:</strong> 120-129/less than 80 mmHg</li>
+      <li><strong>Stage 1 Hypertension:</strong> 130-139/80-89 mmHg</li>
+      <li><strong>Stage 2 Hypertension:</strong> 140+/90+ mmHg</li>
+      <li><strong>Hypertensive Crisis:</strong> 180+/120+ mmHg - Seek emergency care!</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    <p><strong>⚠️ Medical Disclaimer:</strong> This report is for tracking purposes only and does not replace professional medical advice.</p>
+    <p>Generated by BP Naija Tracker | Always consult your healthcare provider</p>
+  </div>
+</body>
+</html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(pdfContent);
+    printWindow.document.close();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   const averages = getAverages();
 
   const theme = {
@@ -152,6 +274,8 @@ const BPTracker = () => {
     infoBg: darkMode ? 'bg-blue-900' : 'bg-blue-50',
     infoText: darkMode ? 'text-blue-200' : 'text-blue-800'
   };
+
+  const chartData = readings.slice(0, 30).reverse();
 
   return (
     <div className={`min-h-screen ${theme.bg} p-4 transition-colors duration-300`}>
@@ -168,6 +292,25 @@ const BPTracker = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* CHART BUTTON - THIS SHOWS/HIDES GRAPHS! */}
+              <button 
+                onClick={() => setShowCharts(!showCharts)}
+                className={`p-2 ${theme.hover} rounded-full transition-colors`}
+                title="View Charts"
+              >
+                <BarChart3 className={showCharts ? 'text-blue-600' : theme.textSecondary} size={24} />
+              </button>
+              
+              {/* PDF EXPORT BUTTON - THIS CREATES PDF! */}
+              <button 
+                onClick={exportToPDF}
+                className={`p-2 ${theme.hover} rounded-full transition-colors`}
+                title="Export to PDF"
+                disabled={readings.length === 0}
+              >
+                <Download className={readings.length === 0 ? 'text-gray-400' : theme.textSecondary} size={24} />
+              </button>
+              
               <button 
                 onClick={toggleDarkMode}
                 className={`p-2 ${theme.hover} rounded-full transition-colors`}
@@ -213,6 +356,99 @@ const BPTracker = () => {
             </p>
           )}
         </div>
+
+        {/* CHARTS SECTION - THIS IS WHERE GRAPHS APPEAR! */}
+        {showCharts && chartData.length > 0 && (
+          <div className={`${theme.card} rounded-2xl shadow-lg p-6 mb-6`}>
+            <h2 className={`text-xl font-bold ${theme.text} mb-4`}>BP Trend (Last 30 Readings)</h2>
+            
+            <div className="mb-8">
+              <h3 className={`text-sm font-semibold ${theme.text} mb-3`}>Blood Pressure</h3>
+              <div className="relative h-64">
+                <svg width="100%" height="100%" viewBox="0 0 800 250" preserveAspectRatio="xMidYMid meet">
+                  <line x1="50" y1="220" x2="750" y2="220" stroke={darkMode ? '#4b5563' : '#e5e7eb'} strokeWidth="2"/>
+                  <line x1="50" y1="20" x2="50" y2="220" stroke={darkMode ? '#4b5563' : '#e5e7eb'} strokeWidth="2"/>
+                  
+                  {[60, 80, 100, 120, 140, 160, 180].map((val) => (
+                    <g key={val}>
+                      <line x1="50" y1={220 - (val - 60) * 1.6} x2="750" y2={220 - (val - 60) * 1.6} 
+                            stroke={darkMode ? '#374151' : '#f3f4f6'} strokeWidth="1" strokeDasharray="5,5"/>
+                      <text x="35" y={225 - (val - 60) * 1.6} fill={darkMode ? '#9ca3af' : '#6b7280'} fontSize="12" textAnchor="end">{val}</text>
+                    </g>
+                  ))}
+                  
+                  <polyline
+                    points={chartData.map((r, i) => `${50 + (i * (700 / (chartData.length - 1)))},${220 - (r.systolic - 60) * 1.6}`).join(' ')}
+                    fill="none"
+                    stroke="#ef4444"
+                    strokeWidth="3"
+                  />
+                  <polyline
+                    points={chartData.map((r, i) => `${50 + (i * (700 / (chartData.length - 1)))},${220 - (r.diastolic - 60) * 1.6}`).join(' ')}
+                    fill="none"
+                    stroke="#3b82f6"
+                    strokeWidth="3"
+                  />
+                  
+                  {chartData.map((r, i) => (
+                    <g key={i}>
+                      <circle cx={50 + (i * (700 / (chartData.length - 1)))} cy={220 - (r.systolic - 60) * 1.6} 
+                              r="4" fill="#ef4444"/>
+                      <circle cx={50 + (i * (700 / (chartData.length - 1)))} cy={220 - (r.diastolic - 60) * 1.6} 
+                              r="4" fill="#3b82f6"/>
+                    </g>
+                  ))}
+                </svg>
+              </div>
+              <div className="flex justify-center gap-6 mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-red-500 rounded"></div>
+                  <span className={`text-sm ${theme.text}`}>Systolic</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                  <span className={`text-sm ${theme.text}`}>Diastolic</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className={`text-sm font-semibold ${theme.text} mb-3`}>Heart Rate (Pulse)</h3>
+              <div className="relative h-48">
+                <svg width="100%" height="100%" viewBox="0 0 800 180" preserveAspectRatio="xMidYMid meet">
+                  <line x1="50" y1="160" x2="750" y2="160" stroke={darkMode ? '#4b5563' : '#e5e7eb'} strokeWidth="2"/>
+                  <line x1="50" y1="20" x2="50" y2="160" stroke={darkMode ? '#4b5563' : '#e5e7eb'} strokeWidth="2"/>
+                  
+                  {[50, 70, 90, 110, 130].map((val) => (
+                    <g key={val}>
+                      <line x1="50" y1={160 - (val - 50) * 1.5} x2="750" y2={160 - (val - 50) * 1.5} 
+                            stroke={darkMode ? '#374151' : '#f3f4f6'} strokeWidth="1" strokeDasharray="5,5"/>
+                      <text x="35" y={165 - (val - 50) * 1.5} fill={darkMode ? '#9ca3af' : '#6b7280'} fontSize="12" textAnchor="end">{val}</text>
+                    </g>
+                  ))}
+                  
+                  <polyline
+                    points={chartData.map((r, i) => `${50 + (i * (700 / (chartData.length - 1)))},${160 - (r.pulse - 50) * 1.5}`).join(' ')}
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="3"
+                  />
+                  
+                  {chartData.map((r, i) => (
+                    <circle key={i} cx={50 + (i * (700 / (chartData.length - 1)))} cy={160 - (r.pulse - 50) * 1.5} 
+                            r="4" fill="#10b981"/>
+                  ))}
+                </svg>
+              </div>
+              <div className="flex justify-center mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-green-500 rounded"></div>
+                  <span className={`text-sm ${theme.text}`}>Pulse (bpm)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {averages && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -261,32 +497,6 @@ const BPTracker = () => {
           <div className={`${theme.card} rounded-2xl shadow-lg p-6 mb-6`}>
             <h2 className={`text-xl font-bold ${theme.text} mb-4`}>New BP Reading</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div>
-                <label className={`block text-sm font-medium ${theme.text} mb-2`}>
-                  Systolic (Top Number)
-                </label>
-                <input
-                  type="number"
-                  value={formData.systolic}
-                  onChange={(e) => setFormData({...formData, systolic: e.target.value})}
-                  placeholder="120"
-                  className={`w-full px-4 py-3 border ${theme.input} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg`}
-                />
-              </div>
-              
-              <div>
-                <label className={`block text-sm font-medium ${theme.text} mb-2`}>
-                  Diastolic (Bottom Number)
-                </label>
-                <input
-                  type="number"
-                  value={formData.diastolic}
-                  onChange={(e) => setFormData({...formData, diastolic: e.target.value})}
-                  placeholder="80"
-                  className={`w-full px-4 py-3 border ${theme.input} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg`}
-                />
-              </div>
-              
               <div>
                 <label className={`block text-sm font-medium ${theme.text} mb-2`}>
                   Pulse (Heart Rate)
@@ -429,4 +639,30 @@ const BPTracker = () => {
   );
 };
 
-export default BPTracker;
+export default BPTracker;theme.text} mb-2`}>
+                  Systolic (Top Number)
+                </label>
+                <input
+                  type="number"
+                  value={formData.systolic}
+                  onChange={(e) => setFormData({...formData, systolic: e.target.value})}
+                  placeholder="120"
+                  className={`w-full px-4 py-3 border ${theme.input} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg`}
+                />
+              </div>
+              
+              <div>
+                <label className={`block text-sm font-medium ${theme.text} mb-2`}>
+                  Diastolic (Bottom Number)
+                </label>
+                <input
+                  type="number"
+                  value={formData.diastolic}
+                  onChange={(e) => setFormData({...formData, diastolic: e.target.value})}
+                  placeholder="80"
+                  className={`w-full px-4 py-3 border ${theme.input} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg`}
+                />
+              </div>
+              
+              <div>
+                <label className={`block text-sm font-medium ${
