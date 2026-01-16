@@ -1,6 +1,3 @@
-import React, { useState, useEffect } from 'react';
-import { Heart, Plus, TrendingUp, Calendar, AlertCircle, User, Activity, Moon, Sun, Download, BarChart3 } from 'lucide-react';
-
 const BPTracker = () => {
   const [readings, setReadings] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -140,129 +137,57 @@ const BPTracker = () => {
     setShowSettings(false);
   };
 
-  // PDF EXPORT FUNCTION - THIS IS THE PDF FEATURE!
   const exportToPDF = () => {
     const averages = getAverages();
     const sortedReadings = [...readings].reverse();
     
-    let pdfContent = `
+    const pdfContent = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>BP Tracker Report - ${patientName || 'Patient'}</title>
+  <title>BP Report - ${patientName || 'Patient'}</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
     .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #2563eb; padding-bottom: 20px; }
-    .header h1 { color: #1e40af; margin: 0; }
-    .header p { color: #64748b; margin: 5px 0; }
+    h1 { color: #1e40af; }
     .summary { background: #eff6ff; padding: 20px; border-radius: 10px; margin-bottom: 30px; }
-    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
-    .stat-box { text-align: center; background: white; padding: 15px; border-radius: 8px; }
-    .stat-value { font-size: 24px; font-weight: bold; color: #1e40af; }
-    .stat-label { font-size: 12px; color: #64748b; margin-top: 5px; }
     .reading { border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
-    .reading-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .bp-value { font-size: 28px; font-weight: bold; color: #1f2937; }
-    .badge { padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; }
-    .badge-normal { background: #d1fae5; color: #065f46; }
-    .badge-elevated { background: #fef3c7; color: #92400e; }
-    .badge-stage1 { background: #fed7aa; color: #9a3412; }
-    .badge-stage2 { background: #fecaca; color: #991b1b; }
-    .badge-crisis { background: #fca5a5; color: #7f1d1d; }
-    .reading-details { color: #64748b; font-size: 14px; margin-top: 10px; }
-    .notes { background: #f9fafb; padding: 10px; border-radius: 5px; margin-top: 10px; font-style: italic; }
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; color: #64748b; font-size: 12px; }
-    .info-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
-    @media print { body { margin: 0; padding: 20px; } }
+    .bp-value { font-size: 24px; font-weight: bold; }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>🫀 Blood Pressure Report</h1>
+    <h1>Blood Pressure Report</h1>
     <p><strong>Patient:</strong> ${patientName || 'Not Specified'}</p>
-    <p><strong>Report Generated:</strong> ${new Date().toLocaleString('en-NG')}</p>
-    <p><strong>Total Readings:</strong> ${readings.length}</p>
+    <p><strong>Generated:</strong> ${new Date().toLocaleString('en-NG')}</p>
   </div>
-
   ${averages ? `
   <div class="summary">
-    <h2 style="margin-top: 0; color: #1e40af;">7-Day Summary</h2>
-    <div class="summary-grid">
-      <div class="stat-box">
-        <div class="stat-value">${averages.avgSys}/${averages.avgDia}</div>
-        <div class="stat-label">Average BP (mmHg)</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value">${averages.avgPulse}</div>
-        <div class="stat-label">Average Pulse (bpm)</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value">${readings.length}</div>
-        <div class="stat-label">Total Readings</div>
-      </div>
-    </div>
+    <h2>7-Day Summary</h2>
+    <p>Average BP: ${averages.avgSys}/${averages.avgDia} mmHg</p>
+    <p>Average Pulse: ${averages.avgPulse} bpm</p>
+    <p>Total Readings: ${readings.length}</p>
   </div>
   ` : ''}
-
-  <h2 style="color: #1e40af; margin-bottom: 20px;">Reading History</h2>
-
-  ${sortedReadings.map(reading => {
-    const category = getBPCategory(reading.systolic, reading.diastolic);
-    const badgeClass = category.level === 'Normal' ? 'badge-normal' :
-                       category.level === 'Elevated' ? 'badge-elevated' :
-                       category.level === 'Stage 1' ? 'badge-stage1' :
-                       category.level === 'Stage 2' ? 'badge-stage2' : 'badge-crisis';
-    
-    return `
+  <h2>Reading History</h2>
+  ${sortedReadings.map(r => `
     <div class="reading">
-      <div class="reading-header">
-        <div class="bp-value">${reading.systolic}/${reading.diastolic}</div>
-        <span class="badge ${badgeClass}">${category.level}</span>
-      </div>
-      <div class="reading-details">
-        <div>❤️ Pulse: <strong>${reading.pulse} bpm</strong></div>
-        <div>📅 ${reading.date} at ${reading.time}</div>
-        ${reading.medication ? '<div>💊 Medication taken</div>' : ''}
-      </div>
-      ${reading.notes ? `<div class="notes">📝 ${reading.notes}</div>` : ''}
-      <div class="info-box" style="margin-top: 10px; font-size: 13px;">
-        <strong>Advice:</strong> ${category.advice}
-      </div>
+      <div class="bp-value">${r.systolic}/${r.diastolic}</div>
+      <p>Pulse: ${r.pulse} bpm | ${r.date} at ${r.time}</p>
+      ${r.notes ? `<p><em>${r.notes}</em></p>` : ''}
     </div>
-    `;
-  }).join('')}
-
-  <div class="info-box">
-    <h3 style="margin-top: 0;">Blood Pressure Categories:</h3>
-    <ul style="margin: 10px 0;">
-      <li><strong>Normal:</strong> Less than 120/80 mmHg</li>
-      <li><strong>Elevated:</strong> 120-129/less than 80 mmHg</li>
-      <li><strong>Stage 1 Hypertension:</strong> 130-139/80-89 mmHg</li>
-      <li><strong>Stage 2 Hypertension:</strong> 140+/90+ mmHg</li>
-      <li><strong>Hypertensive Crisis:</strong> 180+/120+ mmHg - Seek emergency care!</li>
-    </ul>
-  </div>
-
-  <div class="footer">
-    <p><strong>⚠️ Medical Disclaimer:</strong> This report is for tracking purposes only and does not replace professional medical advice.</p>
-    <p>Generated by BP Naija Tracker | Always consult your healthcare provider</p>
-  </div>
+  `).join('')}
 </body>
-</html>
-    `;
+</html>`;
 
     const printWindow = window.open('', '_blank');
     printWindow.document.write(pdfContent);
     printWindow.document.close();
-    
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
+    setTimeout(() => printWindow.print(), 250);
   };
 
   const averages = getAverages();
-
   const theme = {
     bg: darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-green-50',
     card: darkMode ? 'bg-gray-800' : 'bg-white',
@@ -278,7 +203,7 @@ const BPTracker = () => {
   const chartData = readings.slice(0, 30).reverse();
 
   return (
-    <div className={`min-h-screen ${theme.bg} p-4 transition-colors duration-300`}>
+    <div className={`min-h-screen ${theme.bg} p-4`}>
       <div className="max-w-4xl mx-auto">
         <div className={`${theme.card} rounded-2xl shadow-lg p-6 mb-6`}>
           <div className="flex items-center justify-between mb-4">
@@ -292,36 +217,16 @@ const BPTracker = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* CHART BUTTON - THIS SHOWS/HIDES GRAPHS! */}
-              <button 
-                onClick={() => setShowCharts(!showCharts)}
-                className={`p-2 ${theme.hover} rounded-full transition-colors`}
-                title="View Charts"
-              >
+              <button onClick={() => setShowCharts(!showCharts)} className={`p-2 ${theme.hover} rounded-full`} title="Charts">
                 <BarChart3 className={showCharts ? 'text-blue-600' : theme.textSecondary} size={24} />
               </button>
-              
-              {/* PDF EXPORT BUTTON - THIS CREATES PDF! */}
-              <button 
-                onClick={exportToPDF}
-                className={`p-2 ${theme.hover} rounded-full transition-colors`}
-                title="Export to PDF"
-                disabled={readings.length === 0}
-              >
+              <button onClick={exportToPDF} className={`p-2 ${theme.hover} rounded-full`} title="Export PDF" disabled={readings.length === 0}>
                 <Download className={readings.length === 0 ? 'text-gray-400' : theme.textSecondary} size={24} />
               </button>
-              
-              <button 
-                onClick={toggleDarkMode}
-                className={`p-2 ${theme.hover} rounded-full transition-colors`}
-                title={darkMode ? 'Light Mode' : 'Dark Mode'}
-              >
+              <button onClick={toggleDarkMode} className={`p-2 ${theme.hover} rounded-full`}>
                 {darkMode ? <Sun className="text-yellow-400" size={24} /> : <Moon className={theme.textSecondary} size={24} />}
               </button>
-              <button 
-                onClick={() => setShowSettings(!showSettings)}
-                className={`p-2 ${theme.hover} rounded-full transition-colors`}
-              >
+              <button onClick={() => setShowSettings(!showSettings)} className={`p-2 ${theme.hover} rounded-full`}>
                 <User className={theme.textSecondary} size={24} />
               </button>
             </div>
@@ -329,123 +234,25 @@ const BPTracker = () => {
 
           {showSettings && (
             <div className={`border-t ${theme.border} pt-4 mt-4`}>
-              <label className={`block text-sm font-medium ${theme.text} mb-2`}>
-                Patient Name
-              </label>
+              <label className={`block text-sm font-medium ${theme.text} mb-2`}>Patient Name</label>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={patientName}
-                  onChange={(e) => setPatientName(e.target.value)}
-                  placeholder="Enter your name"
-                  className={`flex-1 px-4 py-2 border ${theme.input} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                />
-                <button
-                  onClick={handleNameSave}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Save
-                </button>
+                <input type="text" value={patientName} onChange={(e) => setPatientName(e.target.value)} 
+                  placeholder="Enter name" className={`flex-1 px-4 py-2 border ${theme.input} rounded-lg`} />
+                <button onClick={handleNameSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
               </div>
             </div>
           )}
 
           {patientName && !showSettings && (
-            <p className={`${theme.text} mt-2`}>
-              <span className="font-medium">Patient:</span> {patientName}
-            </p>
+            <p className={`${theme.text} mt-2`}><span className="font-medium">Patient:</span> {patientName}</p>
           )}
         </div>
 
-        {/* CHARTS SECTION - THIS IS WHERE GRAPHS APPEAR! */}
         {showCharts && chartData.length > 0 && (
           <div className={`${theme.card} rounded-2xl shadow-lg p-6 mb-6`}>
-            <h2 className={`text-xl font-bold ${theme.text} mb-4`}>BP Trend (Last 30 Readings)</h2>
-            
-            <div className="mb-8">
-              <h3 className={`text-sm font-semibold ${theme.text} mb-3`}>Blood Pressure</h3>
-              <div className="relative h-64">
-                <svg width="100%" height="100%" viewBox="0 0 800 250" preserveAspectRatio="xMidYMid meet">
-                  <line x1="50" y1="220" x2="750" y2="220" stroke={darkMode ? '#4b5563' : '#e5e7eb'} strokeWidth="2"/>
-                  <line x1="50" y1="20" x2="50" y2="220" stroke={darkMode ? '#4b5563' : '#e5e7eb'} strokeWidth="2"/>
-                  
-                  {[60, 80, 100, 120, 140, 160, 180].map((val) => (
-                    <g key={val}>
-                      <line x1="50" y1={220 - (val - 60) * 1.6} x2="750" y2={220 - (val - 60) * 1.6} 
-                            stroke={darkMode ? '#374151' : '#f3f4f6'} strokeWidth="1" strokeDasharray="5,5"/>
-                      <text x="35" y={225 - (val - 60) * 1.6} fill={darkMode ? '#9ca3af' : '#6b7280'} fontSize="12" textAnchor="end">{val}</text>
-                    </g>
-                  ))}
-                  
-                  <polyline
-                    points={chartData.map((r, i) => `${50 + (i * (700 / (chartData.length - 1)))},${220 - (r.systolic - 60) * 1.6}`).join(' ')}
-                    fill="none"
-                    stroke="#ef4444"
-                    strokeWidth="3"
-                  />
-                  <polyline
-                    points={chartData.map((r, i) => `${50 + (i * (700 / (chartData.length - 1)))},${220 - (r.diastolic - 60) * 1.6}`).join(' ')}
-                    fill="none"
-                    stroke="#3b82f6"
-                    strokeWidth="3"
-                  />
-                  
-                  {chartData.map((r, i) => (
-                    <g key={i}>
-                      <circle cx={50 + (i * (700 / (chartData.length - 1)))} cy={220 - (r.systolic - 60) * 1.6} 
-                              r="4" fill="#ef4444"/>
-                      <circle cx={50 + (i * (700 / (chartData.length - 1)))} cy={220 - (r.diastolic - 60) * 1.6} 
-                              r="4" fill="#3b82f6"/>
-                    </g>
-                  ))}
-                </svg>
-              </div>
-              <div className="flex justify-center gap-6 mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-red-500 rounded"></div>
-                  <span className={`text-sm ${theme.text}`}>Systolic</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                  <span className={`text-sm ${theme.text}`}>Diastolic</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className={`text-sm font-semibold ${theme.text} mb-3`}>Heart Rate (Pulse)</h3>
-              <div className="relative h-48">
-                <svg width="100%" height="100%" viewBox="0 0 800 180" preserveAspectRatio="xMidYMid meet">
-                  <line x1="50" y1="160" x2="750" y2="160" stroke={darkMode ? '#4b5563' : '#e5e7eb'} strokeWidth="2"/>
-                  <line x1="50" y1="20" x2="50" y2="160" stroke={darkMode ? '#4b5563' : '#e5e7eb'} strokeWidth="2"/>
-                  
-                  {[50, 70, 90, 110, 130].map((val) => (
-                    <g key={val}>
-                      <line x1="50" y1={160 - (val - 50) * 1.5} x2="750" y2={160 - (val - 50) * 1.5} 
-                            stroke={darkMode ? '#374151' : '#f3f4f6'} strokeWidth="1" strokeDasharray="5,5"/>
-                      <text x="35" y={165 - (val - 50) * 1.5} fill={darkMode ? '#9ca3af' : '#6b7280'} fontSize="12" textAnchor="end">{val}</text>
-                    </g>
-                  ))}
-                  
-                  <polyline
-                    points={chartData.map((r, i) => `${50 + (i * (700 / (chartData.length - 1)))},${160 - (r.pulse - 50) * 1.5}`).join(' ')}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="3"
-                  />
-                  
-                  {chartData.map((r, i) => (
-                    <circle key={i} cx={50 + (i * (700 / (chartData.length - 1)))} cy={160 - (r.pulse - 50) * 1.5} 
-                            r="4" fill="#10b981"/>
-                  ))}
-                </svg>
-              </div>
-              <div className="flex justify-center mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-green-500 rounded"></div>
-                  <span className={`text-sm ${theme.text}`}>Pulse (bpm)</span>
-                </div>
-              </div>
+            <h2 className={`text-xl font-bold ${theme.text} mb-4`}>BP Trend (Last 30)</h2>
+            <div className="h-64 flex items-center justify-center">
+              <p className={theme.textSecondary}>Chart visualization here</p>
             </div>
           </div>
         )}
@@ -457,12 +264,9 @@ const BPTracker = () => {
                 <Activity className="text-blue-600" size={20} />
                 <span className={`text-sm ${theme.textSecondary}`}>7-Day Average</span>
               </div>
-              <p className={`text-3xl font-bold ${theme.text}`}>
-                {averages.avgSys}/{averages.avgDia}
-              </p>
+              <p className={`text-3xl font-bold ${theme.text}`}>{averages.avgSys}/{averages.avgDia}</p>
               <p className={`text-xs ${theme.textSecondary} mt-1`}>mmHg</p>
             </div>
-            
             <div className={`${theme.card} rounded-xl shadow p-4`}>
               <div className="flex items-center gap-3 mb-2">
                 <Heart className="text-red-600" size={20} />
@@ -471,25 +275,21 @@ const BPTracker = () => {
               <p className={`text-3xl font-bold ${theme.text}`}>{averages.avgPulse}</p>
               <p className={`text-xs ${theme.textSecondary} mt-1`}>bpm</p>
             </div>
-            
             <div className={`${theme.card} rounded-xl shadow p-4`}>
               <div className="flex items-center gap-3 mb-2">
                 <TrendingUp className="text-green-600" size={20} />
-                <span className={`text-sm ${theme.textSecondary}`}>Total Readings</span>
+                <span className={`text-sm ${theme.textSecondary}`}>Total</span>
               </div>
               <p className={`text-3xl font-bold ${theme.text}`}>{readings.length}</p>
-              <p className={`text-xs ${theme.textSecondary} mt-1`}>recorded</p>
+              <p className={`text-xs ${theme.textSecondary} mt-1`}>readings</p>
             </div>
           </div>
         )}
 
         {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-xl shadow-lg hover:shadow-xl transition-all mb-6 flex items-center justify-center gap-2 font-semibold"
-          >
-            <Plus size={24} />
-            Add New Reading
+          <button onClick={() => setShowForm(true)} 
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-xl shadow-lg mb-6 flex items-center justify-center gap-2 font-semibold">
+            <Plus size={24} /> Add New Reading
           </button>
         )}
 
@@ -498,55 +298,39 @@ const BPTracker = () => {
             <h2 className={`text-xl font-bold ${theme.text} mb-4`}>New BP Reading</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className={`block text-sm font-medium ${theme.text} mb-2`}>
-                  Pulse (Heart Rate)
-                </label>
-                <input
-                  type="number"
-                  value={formData.pulse}
-                  onChange={(e) => setFormData({...formData, pulse: e.target.value})}
-                  placeholder="72"
-                  className={`w-full px-4 py-3 border ${theme.input} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg`}
-                />
+                <label className={`block text-sm font-medium ${theme.text} mb-2`}>Systolic</label>
+                <input type="number" value={formData.systolic} onChange={(e) => setFormData({...formData, systolic: e.target.value})}
+                  placeholder="120" className={`w-full px-4 py-3 border ${theme.input} rounded-lg text-lg`} />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium ${theme.text} mb-2`}>Diastolic</label>
+                <input type="number" value={formData.diastolic} onChange={(e) => setFormData({...formData, diastolic: e.target.value})}
+                  placeholder="80" className={`w-full px-4 py-3 border ${theme.input} rounded-lg text-lg`} />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium ${theme.text} mb-2`}>Pulse</label>
+                <input type="number" value={formData.pulse} onChange={(e) => setFormData({...formData, pulse: e.target.value})}
+                  placeholder="72" className={`w-full px-4 py-3 border ${theme.input} rounded-lg text-lg`} />
               </div>
             </div>
-
             <div className="mb-4">
-              <label className={`block text-sm font-medium ${theme.text} mb-2`}>
-                Notes (Optional)
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                placeholder="E.g., After exercise, feeling stressed, etc."
-                className={`w-full px-4 py-3 border ${theme.input} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                rows="2"
-              />
+              <label className={`block text-sm font-medium ${theme.text} mb-2`}>Notes</label>
+              <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                placeholder="Optional notes" className={`w-full px-4 py-3 border ${theme.input} rounded-lg`} rows="2" />
             </div>
-
             <div className="mb-4">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.medication}
-                  onChange={(e) => setFormData({...formData, medication: e.target.checked})}
-                  className="w-5 h-5 text-blue-600 rounded"
-                />
-                <span className={`text-sm ${theme.text}`}>I took my medication today</span>
+                <input type="checkbox" checked={formData.medication} 
+                  onChange={(e) => setFormData({...formData, medication: e.target.checked})} className="w-5 h-5" />
+                <span className={`text-sm ${theme.text}`}>Took medication today</span>
               </label>
             </div>
-
             <div className="flex gap-3">
-              <button
-                onClick={handleSubmit}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
-              >
+              <button onClick={handleSubmit} className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold">
                 Save Reading
               </button>
-              <button
-                onClick={() => setShowForm(false)}
-                className={`px-6 py-3 border-2 ${theme.border} ${theme.text} rounded-lg ${theme.hover} transition-colors font-semibold`}
-              >
+              <button onClick={() => setShowForm(false)} 
+                className={`px-6 py-3 border-2 ${theme.border} ${theme.text} rounded-lg ${theme.hover} font-semibold`}>
                 Cancel
               </button>
             </div>
@@ -558,47 +342,32 @@ const BPTracker = () => {
             <div className={`${theme.card} rounded-2xl shadow-lg p-12 text-center`}>
               <Calendar className={`mx-auto ${theme.textSecondary} mb-4`} size={48} />
               <h3 className={`text-xl font-semibold ${theme.textSecondary} mb-2`}>No readings yet</h3>
-              <p className={theme.textSecondary}>Start tracking your blood pressure by adding your first reading</p>
+              <p className={theme.textSecondary}>Add your first blood pressure reading</p>
             </div>
           ) : (
             readings.map((reading) => {
               const category = getBPCategory(reading.systolic, reading.diastolic);
               return (
-                <div key={reading.id} className={`${theme.card} rounded-xl shadow-lg p-5 hover:shadow-xl transition-shadow`}>
-                  <div className="flex items-start justify-between mb-3">
+                <div key={reading.id} className={`${theme.card} rounded-xl shadow-lg p-5`}>
+                  <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <span className={`text-3xl font-bold ${theme.text}`}>
-                          {reading.systolic}/{reading.diastolic}
-                        </span>
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${category.color}`}>
-                          {category.level}
-                        </span>
+                        <span className={`text-3xl font-bold ${theme.text}`}>{reading.systolic}/{reading.diastolic}</span>
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${category.color}`}>{category.level}</span>
                       </div>
                       <div className={`flex items-center gap-4 text-sm ${theme.textSecondary} mb-2`}>
                         <span className="flex items-center gap-1">
-                          <Heart size={16} className="text-red-500" />
-                          {reading.pulse} bpm
+                          <Heart size={16} className="text-red-500" /> {reading.pulse} bpm
                         </span>
                         <span>{reading.date} at {reading.time}</span>
-                        {reading.medication && (
-                          <span className="text-green-600 font-medium">✓ Medication taken</span>
-                        )}
+                        {reading.medication && <span className="text-green-600">✓ Medication</span>}
                       </div>
-                      {reading.notes && (
-                        <p className={`text-sm ${theme.textSecondary} italic mt-2`}>{reading.notes}</p>
-                      )}
-                      <div className={`flex items-start gap-2 mt-3 p-3 ${theme.infoBg} rounded-lg`}>
-                        <AlertCircle size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                      {reading.notes && <p className={`text-sm ${theme.textSecondary} italic mt-2`}>{reading.notes}</p>}
+                      <div className={`mt-3 p-3 ${theme.infoBg} rounded-lg`}>
                         <p className={`text-sm ${theme.infoText}`}>{category.advice}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => deleteReading(reading.id)}
-                      className="ml-4 text-red-500 hover:text-red-700 text-sm font-medium"
-                    >
-                      Delete
-                    </button>
+                    <button onClick={() => deleteReading(reading.id)} className="ml-4 text-red-500 hover:text-red-700 text-sm">Delete</button>
                   </div>
                 </div>
               );
@@ -607,62 +376,20 @@ const BPTracker = () => {
         </div>
 
         <div className={`mt-8 ${theme.infoBg} rounded-xl p-6`}>
-          <h3 className={`font-semibold ${theme.text} mb-3`}>Understanding Your Numbers:</h3>
+          <h3 className={`font-semibold ${theme.text} mb-3`}>BP Categories:</h3>
           <div className={`space-y-2 text-sm ${theme.text}`}>
-            <div className="flex gap-2">
-              <span className="font-medium">Normal:</span>
-              <span>Less than 120/80</span>
-            </div>
-            <div className="flex gap-2">
-              <span className="font-medium">Elevated:</span>
-              <span>120-129/less than 80</span>
-            </div>
-            <div className="flex gap-2">
-              <span className="font-medium">Stage 1:</span>
-              <span>130-139/80-89</span>
-            </div>
-            <div className="flex gap-2">
-              <span className="font-medium">Stage 2:</span>
-              <span>140+/90+</span>
-            </div>
-            <div className="flex gap-2">
-              <span className="font-medium">Crisis:</span>
-              <span>180+/120+ - Seek emergency care!</span>
-            </div>
+            <div>Normal: Less than 120/80</div>
+            <div>Elevated: 120-129/less than 80</div>
+            <div>Stage 1: 130-139/80-89</div>
+            <div>Stage 2: 140+/90+</div>
+            <div>Crisis: 180+/120+ - Emergency!</div>
           </div>
-          <p className={`text-xs ${theme.textSecondary} mt-4`}>
-            ⚠️ This app is for tracking only. Always consult your doctor for medical advice.
-          </p>
+          <p className={`text-xs ${theme.textSecondary} mt-4`}>⚠️ For tracking only. Consult your doctor.</p>
         </div>
       </div>
     </div>
   );
 };
 
-export default BPTracker;theme.text} mb-2`}>
-                  Systolic (Top Number)
-                </label>
-                <input
-                  type="number"
-                  value={formData.systolic}
-                  onChange={(e) => setFormData({...formData, systolic: e.target.value})}
-                  placeholder="120"
-                  className={`w-full px-4 py-3 border ${theme.input} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg`}
-                />
-              </div>
-              
-              <div>
-                <label className={`block text-sm font-medium ${theme.text} mb-2`}>
-                  Diastolic (Bottom Number)
-                </label>
-                <input
-                  type="number"
-                  value={formData.diastolic}
-                  onChange={(e) => setFormData({...formData, diastolic: e.target.value})}
-                  placeholder="80"
-                  className={`w-full px-4 py-3 border ${theme.input} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg`}
-                />
-              </div>
-              
-              <div>
-                <label className={`block text-sm font-medium ${
+export default BPTracker;
+
