@@ -268,4 +268,3 @@ ${readings.map(r => `<div class="reading"><div class="bp-value">${r.systolic}/${
 export default BPTracker;
 
 
-
